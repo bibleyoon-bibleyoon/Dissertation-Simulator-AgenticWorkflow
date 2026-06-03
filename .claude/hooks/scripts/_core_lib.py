@@ -423,3 +423,38 @@ def _truncate(text, max_len):
         return text
     return text[:max_len - 3] + "..."
 
+
+# --- Cross-cutting foundation moved per ADR-078 (Increment 3) -------------
+# CHARS_PER_TOKEN, atomic_write, and shared SOT-gate regexes are used by
+# snapshot, facts, and diagnosis — promoted to the foundation layer.
+CHARS_PER_TOKEN = 2.5
+
+
+_DIAG_SELECTED_RE = re.compile(
+    r"(?:Selected|Chosen|Primary)\s*(?:Hypothesis|H\d)\s*:\s*(.+)",
+    re.IGNORECASE,
+)
+
+
+_DIAG_GATE_RE = re.compile(
+    r"Gate\s*:\s*(verification|pacs|review)", re.IGNORECASE,
+)
+
+
+def atomic_write(filepath, content):
+    """Write content atomically: temp file → rename."""
+    dirpath = os.path.dirname(filepath)
+    os.makedirs(dirpath, exist_ok=True)
+
+    fd, tmp_path = tempfile.mkstemp(dir=dirpath, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.rename(tmp_path, filepath)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+

@@ -1252,6 +1252,23 @@
 - **관련 ADR**: ADR-076 (Increment 1), ADR-030 (절삭 상수 중앙화), ADR-061 (Doc-Code Sync — DC-8/9/10 인벤토리 갱신)
 - **관련 커밋**: (미커밋 — Increment 2 구현 완료)
 
+### ADR-078: `_context_lib.py` 모듈 분리 (Increment 3) — `_snapshot_lib` 추출 + `_core_lib` 확장
+
+- **날짜**: 2026-06-03
+- **상태**: `Accepted` (Increment 3 구현 완료 — 후속 `_facts`/`_diagnosis`는 별도 ADR)
+- **맥락**: ADR-076/077 후속. post-inc2 `_context_lib.py`(4,243줄)에서 **스냅샷 도메인**을 추출. inc1(leaf)·inc2(middle)와 달리 snapshot/facts/diagnosis는 **서로 참조**하는 가장 얽힌 증분이었다 (SNAP→`_extract_quality_gate_state`/`_DIAG_*`, FACTS→`_extract_decisions`). 도메인-사용 매트릭스로 cross-cutting 심볼을 식별했다.
+- **결정**: **Increment 3** = `_core_lib` 확장 + `_snapshot_lib` 추출:
+  - `_core_lib.py`(15→19): `CHARS_PER_TOKEN`·`_DIAG_GATE_RE`·`_DIAG_SELECTED_RE`·`atomic_write` 이동. snapshot·facts·diagnosis가 공유하는 cross-cutting foundation(self-contained).
+  - `_snapshot_lib.py`(신규, 40심볼): `generate_snapshot_md` + 압축 파이프라인 + decision 추출(`_extract_decisions`+`_DECISION_*`) + `_extract_quality_gate_state`(snapshot만 사용 → facts에서 재배치). **`_core_lib`+`_capture_lib`+`_validation_lib` 의존**(상위 계층).
+  - `_context_lib.py`(4,243→2,553): shim에 `from _snapshot_lib import *` + underscore 재수출(`_extract_decisions`·`_remove_section`); core underscore 재수출 확장(`_DIAG_GATE_RE`·`_DIAG_SELECTED_RE`).
+- **근거**: cross-cutting 심볼을 `_core_lib`로 승격해 순환 차단. snapshot은 foundation+capture+validation 위의 상위 계층 — DAG `_core ← {_validation, _capture} ← _snapshot`, 무순환.
+- **적대적 검증 발견 + 수정 (핵심 교훈)**: 결정론 게이트(byte-verbatim·개수 보존·1,331 유닛·108 E2E·83/83·외부 import 해석)가 **전부 통과했으나, 적대적 검증 워크플로가 HIGH 버그를 포착**했다 — `_snapshot_lib`이 `validate_step_output`·`parse_review_verdict`(둘 다 `_validation_lib`)를 free global로 호출하나 **import를 누락**(inc3 전엔 monolith의 `from _validation_lib import *`로 해석되던 의존). call-time `NameError`가 두 호출부의 `try/except: pass`에 **삼켜져** IMMORTAL Quality Gate / Anti-Skip Guard 스냅샷 섹션이 조용히 누락됐다. import 성공 + 해당 분기를 타는 테스트 부재로 결정론 게이트가 놓침(inc2 missing-re-export 버그 클래스의 재발 — 이번엔 cross-module import 누락). **수정**: `from _validation_lib import (parse_review_verdict, validate_step_output)` 추가(DAG-safe — `_validation_lib`은 `_core`만 import). **회귀 가드**: `_test_snapshot_lib.py`(10테스트) 추가 — 두 분기를 직접 exercise(monkeypatch로 미수정 시 실패 재현 확인), snapshot 0-테스트 갭 해소.
+- **교훈(향후 증분 필수 검사)**: verbatim move는 "다른 모듈 네임스페이스에서 해석되던" 의존을 자동 보존하지 못한다. 이동 함수가 참조하는 **모든 이미-추출된 모듈(`_core`/`_capture`/`_validation`)** 의 import 완전성을 AST free-name 분석으로 검증해야 한다 (마이그레이션 스크립트가 `val_now` 참조를 import 계산에서 누락한 것이 근본 원인).
+- **구현 검증**: verbatim 44심볼(mismatch 0)·개수 보존(53+40+4=97, core 15→19)·`unittest discover` 1,341 OK·`pytest tests/e2e` 108 passed·무순환·`setup_maintenance` 83/83·적대적 3렌즈(완전성 none, dag-cycle/behavior HIGH → 수정+회귀가드).
+- **대안 기각**: cross-cutting 심볼을 snapshot에 두기(facts/diag가 snapshot 통해 import → 계층 역전); bottom-import/deferred(inc1과 동일 사유).
+- **관련 ADR**: ADR-076 (Inc 1), ADR-077 (Inc 2), ADR-030 (상수 중앙화), ADR-061 (Doc-Code Sync — DC-8/9/10)
+- **관련 커밋**: (미커밋 — Increment 3 구현 완료, 적대적 검증 수정 포함)
+
 ---
 
 ## 문서 관리
