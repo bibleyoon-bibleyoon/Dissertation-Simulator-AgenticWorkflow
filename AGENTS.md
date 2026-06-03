@@ -290,6 +290,7 @@ AgenticWorkflow/
 │   │   ├── _claim_patterns.py (Claim ID 정규식 SOT — 47개 prefix 패턴 중앙화, 모든 claim 관련 스크립트가 import)
 │   │   ├── _core_lib.py       (Foundation — sot_paths·SOT_FILENAMES·MIN_OUTPUT_SIZE·extract_remediations·validate_sot_schema + core 상수, _context_lib에서 추출 ADR-076, DAG root)
 │   │   ├── _validation_lib.py (품질게이트 P1 검증기 — pacs·traceability·review·translation·verification·domain-knowledge·workflow·L0 anti-skip, _core_lib 의존 ADR-076)
+│   │   ├── _capture_lib.py    (세션 캡처 — transcript 파싱·capture_sot/git·completion-state·ULW 감지·phase 분류, _core_lib 의존 ADR-077)
 │   │   ├── save_context.py    (저장 엔진)
 │   │   ├── restore_context.py (복원 — RLM 포인터 + 완료/Git 상태 + Predictive Debugging 위험 점수 캐시 생성 + QO-1~4 품질 최적화: Gate 피드백(JSON+state machine), 이전 섹션 요약(정확한 워드카운트), 11개 scoring signal ACTIVE RETRIEVAL, step 메타데이터)
 │   │   ├── update_work_log.py (작업 로그 누적 — 9개 도구 추적)

@@ -379,3 +379,47 @@ def extract_remediations(warnings, remediations_dict):
                         f"from _REMEDIATIONS — add an entry to the validator script"
                     )
     return result
+
+
+# --- Truncation limits + tool-error patterns + _truncate helper -------------
+# Moved from _context_lib.py per ADR-077 (Increment 2); cross-cutting foundation
+# used by capture, snapshot, and diagnosis. (ADR-030 constant centralization.)
+EDIT_PREVIEW_CHARS = 1000
+
+
+ERROR_RESULT_CHARS = 3000
+
+
+NORMAL_RESULT_CHARS = 1500
+
+
+WRITE_PREVIEW_CHARS = 500
+
+
+GENERIC_INPUT_CHARS = 200
+
+
+BASH_CMD_CHARS = 200
+
+
+TASK_PROMPT_CHARS = 200
+
+
+SOT_CAPTURE_CHARS = 3000
+
+
+TOOL_ERROR_PATTERNS = [
+    "Error:", "error:", "FAILED", "failed",
+    "not found", "Permission denied", "No such file",
+]
+
+
+def _truncate(text, max_len):
+    """Truncate text to max_len, adding ellipsis if needed."""
+    if not text:
+        return ""
+    text = str(text).strip()
+    if len(text) <= max_len:
+        return text
+    return text[:max_len - 3] + "..."
+

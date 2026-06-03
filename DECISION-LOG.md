@@ -1235,6 +1235,23 @@
 - **관련 ADR**: ADR-018 (context_guard 통합 디스패처), ADR-030 (절삭 상수 중앙화), ADR-008 (Hub-Spoke), ADR-061 (Doc-Code Sync — DC-5/DC-9/DC-10 인벤토리 갱신)
 - **관련 커밋**: (미커밋 — Increment 1 구현 완료, 11파일 변경 + 신규 2파일)
 
+### ADR-077: `_context_lib.py` 모듈 분리 (Increment 2) — `_capture_lib` 추출 + `_core_lib` 확장
+
+- **날짜**: 2026-06-03
+- **상태**: `Accepted` (Increment 2 구현 완료 — 후속 `_snapshot`/`_facts`/`_diagnosis`는 별도 ADR)
+- **맥락**: ADR-076 Increment 1(_core_lib + _validation_lib) 후속. post-inc1 `_context_lib.py`(5,189줄)에서 **세션 캡처 도메인**을 추출한다. validation(leaf)과 달리 capture는 **중간 계층** — 잔류 snapshot/facts(`generate_snapshot_md`·`_extract_file_operations`)와 diagnosis(`_gather_raw_evidence`)가 capture/`_truncate`를 호출한다. 결정론적 분석 결과 capture 16함수는 잔류 도메인 함수를 **역참조하지 않으며**(순환 없음), 잔류에 대한 의존은 절삭 상수 8개 + `TOOL_ERROR_PATTERNS` + `_truncate`(8줄 헬퍼) + `sot_paths`(이미 _core)뿐이다.
+- **결정**: **Increment 2** = `_core_lib` 확장 + `_capture_lib` 추출:
+  - `_core_lib.py` 확장(5→15 심볼): 절삭 상수 8개(`EDIT_PREVIEW_CHARS`·`ERROR_RESULT_CHARS`·`NORMAL_RESULT_CHARS`·`WRITE_PREVIEW_CHARS`·`GENERIC_INPUT_CHARS`·`BASH_CMD_CHARS`·`TASK_PROMPT_CHARS`·`SOT_CAPTURE_CHARS`) + `TOOL_ERROR_PATTERNS` + `_truncate` 이동. 이들은 capture·snapshot·diagnosis가 공유하는 cross-cutting foundation(ADR-030 상수 중앙화와 정합).
+  - `_capture_lib.py`(신규, 16함수, `_core_lib`+stdlib에만 의존): `parse_transcript`·`_parse_*`·`_extract_tool_*`·`capture_sot`·`capture_git_state`·`extract_completion_state`·`read_autopilot_state`·`read_active_team_state`·`detect_ulw_mode`·`check_ulw_compliance`·`_classify_phase`·`detect_conversation_phase`·`detect_phase_transitions`.
+  - `_context_lib.py`(5,189→4,243줄): shim에 `from _capture_lib import *` 추가 + `from _core_lib import _truncate`(underscore 명시 재수출 — 잔류 snapshot/diagnosis가 호출).
+- **근거**: 절대 기준 1(품질) — interface 추가 축소·locality 향상. 중간 계층이지만 capture→잔류 역참조 0이라 shim star-import로 안전(잔류→capture는 call-time 해석). 공유 절삭 상수/`_truncate`를 `_core_lib`로 올려 순환 차단(inc1의 `sot_paths`와 동일 패턴).
+- **캡슐화 결정**: capture `_`-prefixed 내부 헬퍼 6개(`_parse_user_entry`·`_parse_assistant_entry`·`_extract_tool_use_summary`·`_extract_tool_result_summary`·`_extract_file_from_nearby_tool_use`·`_classify_phase`)는 외부 import 0·잔류 호출 0 → **재수출하지 않음**(ADR-076 캡슐화 원칙 일관: 외부 사용 underscore만 재수출, capture는 0개). `_capture_lib` 헤더는 실사용 stdlib(json·os·re·sys·subprocess·datetime)로 트림.
+- **구현 검증**: 결정론적 — 이동 26심볼 byte-verbatim(mismatch 0)·개수 보존(97 ctx + 16 cap + 10→core = 123, core 5→15)·기존 5 core 불변·`unittest discover` 1,311 OK·`pytest tests/e2e` 108 passed·외부 심볼 import 해석·3+1모듈 standalone 무순환·`setup_maintenance` 83/83. + 적대적 검증 워크플로 3렌즈(완전성/순환·import-time 의미론·행위 보존) 전부 `refuted:false`.
+- **알려진 갭(후속 권장)**: capture 16함수는 **직접 유닛 테스트 0**(선재 — 모놀리스에도 없었고 Hook 런타임 경로라 suite 미커버). 적대 검증이 16개 전수 smoke-test로 현재 정상 확인. `_test_capture_lib.py` 추가를 후속 권장.
+- **대안 기각**: 절삭 상수/`_truncate`를 `_capture_lib`에 두기 → snapshot/diagnosis가 capture를 통해 import해야 해 capture가 사실상 foundation 역할(부정확). bottom-import/deferred import → inc1과 동일 사유로 기각.
+- **관련 ADR**: ADR-076 (Increment 1), ADR-030 (절삭 상수 중앙화), ADR-061 (Doc-Code Sync — DC-8/9/10 인벤토리 갱신)
+- **관련 커밋**: (미커밋 — Increment 2 구현 완료)
+
 ---
 
 ## 문서 관리
