@@ -456,4 +456,7 @@ test_tier2("Empty file_path value", None, {"file_path": ""})
 test_tier2("Directory path returns None", None, {"file_path": "/tmp"})
 
 print(f"\n=== Results: {passed} passed, {failed} failed ===")
-sys.exit(1 if failed else 0)
+# Guard process exit so `unittest discover` can import this standalone script
+# without the module-level sys.exit() raising SystemExit during collection.
+if __name__ == "__main__":
+    sys.exit(1 if failed else 0)

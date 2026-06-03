@@ -84,4 +84,7 @@ test("safe ; destructive", True, "ls -la ; rm -rf /")
 test("safe | safe", False, "cat file.txt | grep pattern")
 
 print(f"\n=== Results: {passed} passed, {failed} failed ===")
-sys.exit(1 if failed else 0)
+# Guard process exit so `unittest discover` can import this standalone script
+# without the module-level sys.exit() raising SystemExit during collection.
+if __name__ == "__main__":
+    sys.exit(1 if failed else 0)

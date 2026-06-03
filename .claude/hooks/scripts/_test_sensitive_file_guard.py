@@ -91,4 +91,7 @@ test("CLAUDE.md", False, "CLAUDE.md")
 test("settings.json", False, ".claude/settings.json")
 
 print(f"\n=== Results: {passed} passed, {failed} failed ===")
-sys.exit(1 if failed else 0)
+# Guard process exit so `unittest discover` can import this standalone script
+# without the module-level sys.exit() raising SystemExit during collection.
+if __name__ == "__main__":
+    sys.exit(1 if failed else 0)

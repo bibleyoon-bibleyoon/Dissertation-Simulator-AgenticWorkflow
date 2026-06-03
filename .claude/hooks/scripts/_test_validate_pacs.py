@@ -42,27 +42,28 @@ class TestPacsValidation(unittest.TestCase):
             f"2. What assumptions are weak? Database coverage assumption.\n"
             f"3. What would a critic say? Sample size too small.\n\n"
             f"## Dimensions\n\n"
-            f"- F (Faithfulness): {f_score}\n"
-            f"- C (Completeness): {c_score}\n"
-            f"- L (Logical Coherence): {l_score}\n\n"
+            f"| Dimension | Score |\n"
+            f"|-----------|-------|\n"
+            f"| F (Faithfulness) | {f_score} |\n"
+            f"| C (Completeness) | {c_score} |\n"
+            f"| L (Logical Coherence) | {l_score} |\n\n"
             f"## pACS Score\n\n"
             f"pACS = min(F, C, L) = {min(f_score, c_score, l_score)}\n"
         )
 
     def test_valid_pacs_log(self):
         self._write_pacs_log(1, self._make_valid_pacs())
-        result = vp.validate_pacs_log(str(self.pacs_dir / "step-1-pacs.md"))
-        self.assertTrue(result.get("valid", False) or result.get("pa1", False),
-                        f"Valid pACS log should pass: {result}")
+        is_valid, warnings = vp.validate_pacs_output(str(self.tmpdir), 1)
+        self.assertTrue(is_valid, f"Valid pACS log should pass: {warnings}")
 
     def test_missing_file(self):
-        result = vp.validate_pacs_log(str(self.pacs_dir / "nonexistent.md"))
-        self.assertFalse(result.get("valid", True))
+        is_valid, warnings = vp.validate_pacs_output(str(self.tmpdir), 99)
+        self.assertFalse(is_valid)
 
     def test_empty_file(self):
         self._write_pacs_log(1, "")
-        result = vp.validate_pacs_log(str(self.pacs_dir / "step-1-pacs.md"))
-        self.assertFalse(result.get("valid", True))
+        is_valid, warnings = vp.validate_pacs_output(str(self.tmpdir), 1)
+        self.assertFalse(is_valid)
 
 
 class TestNoSystemSOTReference(unittest.TestCase):

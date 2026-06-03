@@ -23,45 +23,45 @@ class TestThesisOutputValidation(unittest.TestCase):
 
     def setUp(self):
         self.tmpdir = Path(tempfile.mkdtemp())
-        self.wave_dir = self.tmpdir / "wave-results" / "wave-1"
+        # Wave 5 expects a single output (15-plagiarism-report.md, prefix PC),
+        # which keeps the per-wave validation fixture minimal.
+        self.wave_dir = self.tmpdir / "wave-results" / "wave-5"
         self.wave_dir.mkdir(parents=True)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
 
-    def _write_output(self, step, content):
-        path = self.wave_dir / f"step-{step}.md"
+    def _write_report(self, content):
+        path = self.wave_dir / "15-plagiarism-report.md"
         path.write_text(content, encoding="utf-8")
-        return str(path)
+        return path
 
     def test_valid_output(self):
         content = (
-            "# Literature Search Results\n\n"
+            "# Plagiarism Report\n\n"
             "## Findings\n\n"
             "```yaml\n"
-            "- claim_id: LS-001\n"
+            "- claim_id: PC-001\n"
             "  type: EMPIRICAL\n"
-            "  statement: AI improves research efficiency\n"
-            "  source: Smith et al. 2024\n"
-            "```\n"
+            "  statement: No significant textual overlap detected in the corpus.\n"
+            "  source: Turnitin 2024\n"
+            "```\n\n"
+            "Detailed similarity analysis confirms originality across all chapters, "
+            "with the highest single-source match well below the accepted threshold.\n"
         )
-        path = self._write_output(39, content)
-        result = vto.validate_output(path, project_dir=str(self.tmpdir))
-        self.assertTrue(result.get("valid", False) or result.get("to1", False),
-                        f"Valid output should pass: {result}")
+        self._write_report(content)
+        result = vto.validate_wave(str(self.tmpdir), 5)
+        self.assertTrue(result["passed"], f"Valid wave should pass: {result}")
 
     def test_missing_file(self):
-        result = vto.validate_output(
-            str(self.wave_dir / "nonexistent.md"),
-            project_dir=str(self.tmpdir))
-        self.assertFalse(result.get("valid", True))
+        # No output file written → TO1 missing-file error.
+        result = vto.validate_wave(str(self.tmpdir), 5)
+        self.assertFalse(result["passed"])
 
     def test_empty_file(self):
-        self._write_output(39, "")
-        result = vto.validate_output(
-            str(self.wave_dir / "step-39.md"),
-            project_dir=str(self.tmpdir))
-        self.assertFalse(result.get("valid", True))
+        self._write_report("")
+        result = vto.validate_wave(str(self.tmpdir), 5)
+        self.assertFalse(result["passed"])
 
 
 class TestNoSystemSOTReference(unittest.TestCase):

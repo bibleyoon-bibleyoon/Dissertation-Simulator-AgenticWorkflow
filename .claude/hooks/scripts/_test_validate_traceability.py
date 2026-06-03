@@ -33,29 +33,38 @@ class TestTraceabilityValidation(unittest.TestCase):
         return str(path)
 
     def test_valid_traceability_markers(self):
+        # CT2 requires each referenced step to have an output in SOT that exists.
+        self._write_output("step-1.md", "# Step 1\n\n## Methodology\n\nDetails.\n")
+        self._write_output("step-2.md", "# Step 2\n\n## Framework\n\nDetails.\n")
+        self._write_output("step-3.md", "# Step 3\n\n## Results\n\nDetails.\n")
         content = (
             "# Analysis Output\n\n"
             "Based on previous findings [trace:step-1:methodology], "
             "we extend the framework [trace:step-2:framework]. "
             "The data supports [trace:step-3:results].\n"
         )
-        path = self._write_output("step-5.md", content)
-        result = vt.validate_traceability(path, step=5, project_dir=str(self.tmpdir))
-        self.assertTrue(result.get("valid", False) or result.get("ct1", False),
-                        f"Valid traceability should pass: {result}")
+        self._write_output("step-5.md", content)
+        sot = {"outputs": {
+            "step-1": "step-1.md", "step-2": "step-2.md",
+            "step-3": "step-3.md", "step-5": "step-5.md",
+        }}
+        is_valid, warnings = vt.validate_cross_step_traceability(
+            str(self.tmpdir), 5, sot_data=sot)
+        self.assertTrue(is_valid, f"Valid traceability should pass: {warnings}")
 
     def test_missing_file(self):
-        result = vt.validate_traceability(
-            str(self.tmpdir / "nonexistent.md"), step=5,
-            project_dir=str(self.tmpdir))
-        self.assertFalse(result.get("valid", True))
+        sot = {"outputs": {"step-5": "nonexistent.md"}}
+        is_valid, warnings = vt.validate_cross_step_traceability(
+            str(self.tmpdir), 5, sot_data=sot)
+        self.assertFalse(is_valid)
 
     def test_no_markers(self):
-        content = "# Analysis Output\n\nNo cross-references here.\n"
-        path = self._write_output("step-5.md", content)
-        result = vt.validate_traceability(path, step=5, project_dir=str(self.tmpdir))
-        # Should fail CT1 — minimum 3 markers required
-        self.assertFalse(result.get("valid", True) and result.get("ct1", True))
+        self._write_output("step-5.md", "# Analysis Output\n\nNo cross-references here.\n")
+        sot = {"outputs": {"step-5": "step-5.md"}}
+        is_valid, warnings = vt.validate_cross_step_traceability(
+            str(self.tmpdir), 5, sot_data=sot)
+        # Should fail CT1 — no [trace:step-N:...] markers present
+        self.assertFalse(is_valid)
 
 
 class TestNoSystemSOTReference(unittest.TestCase):

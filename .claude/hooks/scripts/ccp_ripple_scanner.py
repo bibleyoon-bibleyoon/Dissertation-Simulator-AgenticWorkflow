@@ -181,6 +181,27 @@ D7_SYNC_PAIRS: Dict[str, List[str]] = {
     ".claude/commands/thesis-start.md": [
         ".claude/hooks/scripts/query_step.py",                    # invocation plan loop + step parameters
     ],
+    # Reverse D-7: architecture documents duplicate the script listings that
+    # also appear in the hub instruction files (AGENTS.md / CLAUDE.md) and the
+    # parent-framework architecture doc. Editing a hub must prompt syncing back.
+    "AGENTS.md": [
+        "DISSERTATION-SIMULATOR-ARCHITECTURE-AND-PHILOSOPHY.md",
+    ],
+    "CLAUDE.md": [
+        "DISSERTATION-SIMULATOR-ARCHITECTURE-AND-PHILOSOPHY.md",
+    ],
+    "AGENTICWORKFLOW-ARCHITECTURE-AND-PHILOSOPHY.md": [
+        "DISSERTATION-SIMULATOR-ARCHITECTURE-AND-PHILOSOPHY.md",
+    ],
+    # Reverse D-7: the predict-failures command doc shares JSON format contracts
+    # with every script in the Predictive Debugging pipeline. Editing the
+    # orchestration doc must prompt syncing the producer/consumer scripts.
+    ".claude/commands/predict-failures.md": [
+        ".claude/hooks/scripts/scan_code_structure.py",
+        ".claude/hooks/scripts/validate_failure_predictions.py",
+        ".claude/hooks/scripts/generate_failure_report.py",
+        ".claude/hooks/scripts/extract_json_block.py",
+    ],
 }
 
 # ---------------------------------------------------------------------------
